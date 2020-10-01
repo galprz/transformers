@@ -735,7 +735,6 @@ class Trainer:
         logging_loss_scalar = 0.0
         model.zero_grad()
         disable_tqdm = self.args.disable_tqdm or not self.is_local_process_zero()
-        train_pbar = trange(epochs_trained, int(np.ceil(num_train_epochs)), desc="Epoch", disable=disable_tqdm)
         for epoch in range(epochs_trained, int(np.ceil(num_train_epochs))):
             if isinstance(train_dataloader, DataLoader) and isinstance(train_dataloader.sampler, DistributedSampler):
                 train_dataloader.sampler.set_epoch(epoch)
@@ -752,13 +751,11 @@ class Trainer:
             if self.args.past_index >= 0:
                 self._past = None
 
-            epoch_pbar = tqdm(epoch_iterator, desc="Iteration", disable=disable_tqdm)
-            for step, inputs in enumerate(epoch_iterator):
-
+            step = 0
+            for inputs in tqdm(epoch_iterator, desc="Iteration", disable=disable_tqdm):
                 # Skip past any already trained steps if resuming training
                 if steps_trained_in_current_epoch > 0:
                     steps_trained_in_current_epoch -= 1
-                    epoch_pbar.update(1)
                     continue
 
                 tr_loss += self.training_step(model, inputs)
@@ -806,14 +803,6 @@ class Trainer:
 
                         self.log(logs)
 
-                    if (
-                        self.args.evaluation_strategy == EvaluationStrategy.STEPS
-                        and self.global_step % self.args.eval_steps == 0
-                    ):
-                        metrics = self.evaluate()
-                        self._report_to_hp_search(trial, epoch, metrics)
-                        if self.args.load_best_model_at_end:
-                            self._save_training(model, trial, metrics=metrics)
 
                     if (
                         not self.args.load_best_model_at_end
@@ -822,17 +811,15 @@ class Trainer:
                     ):
                         self._save_training(model, trial)
 
-                epoch_pbar.update(1)
+                #epoch_pbar.update(1)
                 if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
                     break
-            epoch_pbar.close()
-            train_pbar.update(1)
+                step += 1
 
-            if self.args.evaluation_strategy == EvaluationStrategy.EPOCH:
-                metrics = self.evaluate()
-                self._report_to_hp_search(trial, epoch, metrics)
-                if self.args.load_best_model_at_end:
-                    self._save_training(model, trial, metrics=metrics)
+            metrics = self.evaluate()
+            self._report_to_hp_search(trial, epoch, metrics)
+            if self.args.load_best_model_at_end:
+                self._save_training(model, trial, metrics=metrics)
 
             if self.args.tpu_metrics_debug or self.args.debug:
                 if is_torch_tpu_available():
@@ -846,7 +833,6 @@ class Trainer:
             if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
                 break
 
-        train_pbar.close()
         if self.tb_writer:
             self.tb_writer.close()
         if self.args.past_index and hasattr(self, "_past"):
