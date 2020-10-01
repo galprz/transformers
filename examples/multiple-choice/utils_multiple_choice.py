@@ -250,6 +250,44 @@ class DataProcessor:
         raise NotImplementedError()
 
 
+class SimProcessor(DataProcessor):
+
+    def get_train_examples(self, data_dir):
+        path = os.path.join(data_dir, "train.json")
+        with open(path, "r") as file:
+            data = json.load(file)
+            return self._create_examples(data, "train")
+
+    def get_dev_examples(self, data_dir):
+        path = os.path.join(data_dir, "test.json")
+        with open(path, "r") as file:
+            data = json.load(file)
+            return self._create_examples(data, "dev")
+
+    def get_test_examples(self, data_dir):
+        path = os.path.join(data_dir, "test.json")
+        with open(path, "r") as file:
+            data = json.load(file)
+            return self._create_examples(data, "test")
+
+    def get_labels(self):
+        return ["0", "1", "2", "3"]
+
+    def _create_examples(self, data, id_prefix):
+        data = data["data"]
+        examples=[]
+        for idx, record in enumerate(data):
+            answers = [str(answer) for answer in record["answers"]]
+
+            examples.append( InputExample(
+                example_id=f"{id_prefix}_{idx}",
+                question=record["question"],
+                contexts=[record["context"], record["context"], record["context"], record["context"]],
+                endings=answers,
+                label=str(answers.index(str(record["correct_answer"]))),
+            ))
+        return examples
+
 class RaceProcessor(DataProcessor):
     """Processor for the RACE data set."""
 
@@ -575,5 +613,5 @@ def convert_examples_to_features(
     return features
 
 
-processors = {"race": RaceProcessor, "swag": SwagProcessor, "arc": ArcProcessor, "syn": SynonymProcessor}
-MULTIPLE_CHOICE_TASKS_NUM_LABELS = {"race", 4, "swag", 4, "arc", 4, "syn", 5}
+processors = {"sim": SimProcessor, "race": RaceProcessor, "swag": SwagProcessor, "arc": ArcProcessor, "syn": SynonymProcessor}
+MULTIPLE_CHOICE_TASKS_NUM_LABELS = {"sim", 4, "race", 4, "swag", 4, "arc", 4, "syn", 5}
