@@ -17,7 +17,13 @@ from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Dataset
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data.sampler import RandomSampler, Sampler, SequentialSampler
-from tqdm.auto import tqdm, trange
+from tqdm import tqdm as tqdm_base
+def tqdm(*args, **kwargs):
+    if hasattr(tqdm_base, '_instances'):
+        for instance in list(tqdm_base._instances):
+            tqdm_base._decr_instances(instance)
+    return tqdm_base(*args, **kwargs)
+
 
 from .data.data_collator import DataCollator, DataCollatorWithPadding, default_data_collator
 from .file_utils import WEIGHTS_NAME, is_datasets_available, is_torch_tpu_available
@@ -803,14 +809,6 @@ class Trainer:
 
                         self.log(logs)
 
-
-                    if (
-                        not self.args.load_best_model_at_end
-                        and self.args.save_steps > 0
-                        and self.global_step % self.args.save_steps == 0
-                    ):
-                        self._save_training(model, trial)
-
                 #epoch_pbar.update(1)
                 if self.args.max_steps > 0 and self.global_step >= self.args.max_steps:
                     break
@@ -818,8 +816,7 @@ class Trainer:
 
             metrics = self.evaluate()
             self._report_to_hp_search(trial, epoch, metrics)
-            if self.args.load_best_model_at_end:
-                self._save_training(model, trial, metrics=metrics)
+            self._save_training(model, trial, metrics=metrics)
 
             if self.args.tpu_metrics_debug or self.args.debug:
                 if is_torch_tpu_available():
