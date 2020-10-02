@@ -882,7 +882,7 @@ class Trainer:
 
         # Determine the new best metric / best model checkpoint
         if metrics is not None:
-            metric_to_check = self.args.metric_for_best_model
+            metric_to_check = "eval_acc"
             if not metric_to_check.startswith("eval_"):
                 metric_to_check = f"eval_{metric_to_check}"
             metric_value = metrics[metric_to_check]
