@@ -18,6 +18,8 @@ from torch.utils.data.dataset import Dataset
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data.sampler import RandomSampler, Sampler, SequentialSampler
 from tqdm import tqdm as tqdm_base
+from transformers import logging
+logging.set_verbosity_info()
 def tqdm(*args, **kwargs):
     if hasattr(tqdm_base, '_instances'):
         for instance in list(tqdm_base._instances):
@@ -887,7 +889,7 @@ class Trainer:
                 metric_to_check = f"eval_{metric_to_check}"
             metric_value = metrics[metric_to_check]
 
-            operator = np.greater if self.args.greater_is_better else np.less
+            operator = np.greater
             if (
                 self.state.best_metric is None
                 or self.state.best_model_checkpoint is None

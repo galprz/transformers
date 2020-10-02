@@ -37,6 +37,7 @@ from utils_multiple_choice import MultipleChoiceDataset, Split, processors
 
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def simple_accuracy(preds, labels):
